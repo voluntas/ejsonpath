@@ -44,14 +44,34 @@
 execute(Path, Doc) ->
     execute(Path, Doc, []).
 
+map_to_list(Map) when is_map(Map) ->
+    {[ {K, map_to_list(V)} || {K,V} <- maps:to_list(Map) ]};
+map_to_list(V) ->
+    V.
+
+list_to_map({[{_K, _V}|_] = List}) when is_list(List) ->
+    maps:from_list([ {K1, list_to_map(V1)} || {K1, V1} <- List]);
+list_to_map([Elem|_] = List) when is_list(List); is_map(Elem) ->
+    [ list_to_map(E) || E <- List];
+list_to_map(V) -> V.
+
 -spec execute(jsonpath(), json_node(), [jsonpath_funspec()]) -> [json_node()].
 execute(Path, Doc, Functions) ->
     {ok, Tokens, _} = ejsonpath_scan:string(Path),
     {ok, Tree} = ejsonpath_parse:parse(Tokens),
-    Context = #context{root=Doc, set=[], functions=Functions},
+    case is_map(Doc) of
+        false ->
+            Context = #context{root=Doc, set=[], functions=Functions};
+        true ->
+            Context = #context{root=map_to_list(Doc), set=[], functions=Functions}
+    end,
+
     %% try
     #context{set=Result} = execute_tree(Tree, Context),
-    Result.
+    case is_map(Doc) of
+        false -> Result;
+        true -> list_to_map(Result)
+    end.
     %% catch Class:Reason ->
     %%         io:format(user, "~p~n~p~n~p~n",
     %%                   [Class, Reason, erlang:get_stacktrace()]),
