@@ -90,6 +90,7 @@ predicate -> '[' binary_expr ']' : {refine, '$2'}.
 predicate -> '[' index_expr ']' : {refine, '$2'}.
 predicate -> '[' slice ']' : {refine, '$2'}.
 predicate -> '[' comma_slice ']' : {refine, '$2'}.
+predicate -> '[' ']' : {refine, '*'}.
 predicate -> '[' '*' ']' : {refine, value('$2')}.
 % predicate -> '[' string ']' : {refine, value('$2')}. this one defined in 'comma_slice' rule
 
