@@ -46,19 +46,24 @@ execute(Path, Doc) ->
 
 map_to_list(Map) when is_map(Map) ->
     {[ {K, map_to_list(V)} || {K,V} <- maps:to_list(Map) ]};
+map_to_list(L) when is_list(L) ->
+    [ map_to_list(V) || V <- L ];
 map_to_list(V) ->
     V.
 
-list_to_map({[{_K, _V}|_] = List}) when is_list(List) ->
+list_to_map({List}) when is_list(List) ->
     maps:from_list([ {K1, list_to_map(V1)} || {K1, V1} <- List]);
-list_to_map([Elem|_] = List) when is_list(List); is_map(Elem) ->
+list_to_map(List) when is_list(List) ->
     [ list_to_map(E) || E <- List];
 list_to_map(V) -> V.
 
 -spec execute(jsonpath(), json_node(), [jsonpath_funspec()]) -> [json_node()].
 execute(Path, Doc, Functions) ->
     {ok, Tokens, _} = ejsonpath_scan:string(Path),
+    % error_logger:info_msg("Tokens: ~p~n", [Tokens]),
+
     {ok, Tree} = ejsonpath_parse:parse(Tokens),
+    % error_logger:info_msg("Tree: ~p~n", [Tree]),
     case is_map(Doc) of
         false ->
             Context = #context{root=Doc, set=[], functions=Functions};
@@ -135,6 +140,10 @@ eval_script({bin_op, '!=', L, R}, CurNode, Ctx) ->
     eval_binary_op(L, R, CurNode, Ctx, fun(X, Y) -> X /= Y end);
 eval_script({bin_op, '>', L, R}, CurNode, Ctx) ->
     eval_binary_op(L, R, CurNode, Ctx, fun(X, Y) -> X > Y end);
+eval_script({bin_op, '=<', L, R}, CurNode, Ctx) ->
+    eval_binary_op(L, R, CurNode, Ctx, fun(X, Y) -> X =< Y end);
+eval_script({bin_op, '>=', L, R}, CurNode, Ctx) ->
+    eval_binary_op(L, R, CurNode, Ctx, fun(X, Y) -> X >= Y end);
 eval_script({bin_op, '<', L, R}, CurNode, Ctx) ->
     eval_binary_op(L, R, CurNode, Ctx, fun(X, Y) -> X < Y end);
 eval_script({bin_op, Op, _L, _R}, _, _) ->
@@ -184,7 +193,11 @@ boolean_value({[]}) ->
     false;
 boolean_value(<<>>) ->
     false;
+boolean_value(undefined) ->
+    false;
 boolean_value(null) ->
+    false;
+boolean_value(0.0) ->
     false;
 boolean_value(0) ->
     false;

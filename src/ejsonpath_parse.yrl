@@ -61,26 +61,30 @@ function_call function_args function_argument.
 Terminals
 '$' '..' '@' '[' ']' '.' key int
 '*' ',' ':'
-'?' '(' ')' string '==' '!=' '<' '>' '&&' '+' '-' '/'.
+'?' '(' ')' string '==' '!=' '<' '>' '=<' '>=' '&&' '+' '-' '/'.
 
 Rootsymbol expr.
 
 Nonassoc 200 '=='.
 Nonassoc 200 '!='.
 Nonassoc 200 '<'.
+Nonassoc 200 '=<'.
 Nonassoc 200 '>'.
+Nonassoc 200 '>='.
 Left 300 '+'.
 Left 300 '-'.
 Left 400 '/'.
 Left 400 '*'.
 Nonassoc 400 '&&'.
 
+expr -> steps : {root, '$1'}.
 expr -> '$' steps : {root, '$2'}.
 
 steps -> step : {steps, ['$1']}.
 steps -> step steps : append_step('$1', '$2').
 
 step -> predicate : {child, '$1'}.
+step -> raw_predicate : {child, '$1'}.  %% WTF?
 step -> axis raw_predicate : {'$1', '$2'}.  %% WTF?
 
 axis -> '.' : child.
@@ -90,7 +94,6 @@ predicate -> '[' binary_expr ']' : {refine, '$2'}.
 predicate -> '[' index_expr ']' : {refine, '$2'}.
 predicate -> '[' slice ']' : {refine, '$2'}.
 predicate -> '[' comma_slice ']' : {refine, '$2'}.
-predicate -> '[' ']' : {refine, '*'}.
 predicate -> '[' '*' ']' : {refine, value('$2')}.
 % predicate -> '[' string ']' : {refine, value('$2')}. this one defined in 'comma_slice' rule
 
@@ -128,7 +131,9 @@ operand -> int : value('$1').
 bin_operator -> '==' : value('$1').
 bin_operator -> '!=' : value('$1').
 bin_operator -> '>' : value('$1').
+bin_operator -> '>=' : value('$1').
 bin_operator -> '<' : value('$1').
+bin_operator -> '=<' : value('$1').
 bin_operator -> '&&' : value('$1').
 bin_operator -> '+' : value('$1').
 bin_operator -> '-' : value('$1').
