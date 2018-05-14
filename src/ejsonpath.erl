@@ -21,21 +21,15 @@
 
 -export_type([json_node/0, jsonpath_funspec/0, jsonpath_fun/0]).
 
--record(
-   context,
-   {root,
-    set=[],
-    functions=[]}).
+-record(context, {
+          root,
+          set = [],
+          functions = []
+         }).
 
 
 -type jsonpath() :: string().
--type json_node() :: null                           % null
-                     | boolean()                    % true/false
-                     | binary()                     % string
-                     | number()                     % int/float
-                     | [json_node()]                % array
-                     | {[{binary(), json_node()}]}. % hash (object)
-
+-type json_node() :: null | boolean() | binary() | number() | [json_node()] | {[{binary(), json_node()}]}. 
 -type jsonpath_funspec() :: {Name::binary(), Fun::jsonpath_fun()} .
 -type jsonpath_fun() :: fun(({CurrentNode::json_node(), RootDoc::json_node()}, Args::[any()]) ->
                                    Return::json_node()).
@@ -44,6 +38,7 @@
 execute(Path, Doc) ->
     execute(Path, Doc, []).
 
+
 map_to_list(Map) when is_map(Map) ->
     {[ {K, map_to_list(V)} || {K,V} <- maps:to_list(Map) ]};
 map_to_list(L) when is_list(L) ->
@@ -51,37 +46,30 @@ map_to_list(L) when is_list(L) ->
 map_to_list(V) ->
     V.
 
+
 list_to_map({List}) when is_list(List) ->
     maps:from_list([ {K1, list_to_map(V1)} || {K1, V1} <- List]);
 list_to_map(List) when is_list(List) ->
     [ list_to_map(E) || E <- List];
 list_to_map(V) -> V.
 
+
 -spec execute(jsonpath(), json_node(), [jsonpath_funspec()]) -> [json_node()].
 execute(Path, Doc, Functions) ->
     {ok, Tokens, _} = ejsonpath_scan:string(Path),
-    % error_logger:info_msg("Tokens: ~p~n", [Tokens]),
-
     {ok, Tree} = ejsonpath_parse:parse(Tokens),
-    % error_logger:info_msg("Tree: ~p~n", [Tree]),
-    case is_map(Doc) of
-        false ->
-            Context = #context{root=Doc, set=[], functions=Functions};
-        true ->
-            Context = #context{root=map_to_list(Doc), set=[], functions=Functions}
-    end,
-
-    %% try
-    #context{set=Result} = execute_tree(Tree, Context),
+    Context = case is_map(Doc) of
+                  false ->
+                      #context{root = Doc, set=[], functions = Functions};
+                  true ->
+                      #context{root = map_to_list(Doc), set = [], functions = Functions}
+              end,
+    #context{set = Result} = execute_tree(Tree, Context),
     case is_map(Doc) of
         false -> Result;
         true -> list_to_map(Result)
     end.
-    %% catch Class:Reason ->
-    %%         io:format(user, "~p~n~p~n~p~n",
-    %%                   [Class, Reason, erlang:get_stacktrace()]),
-    %%         {error, Class, Reason, erlang:get_stacktrace()}
-    %% end.
+
 
 execute_tree({root, {steps, Steps}}, #context{root=Root} = Ctx) ->
     execute_step(Steps, Ctx#context{set=[Root]}).
@@ -165,6 +153,7 @@ eval_binary_op(LScript, RScript, CurNode, Ctx, Op) ->
 %% comma-slices for arrays
 %% [1,2,-1,4]
 slice_list([Idx | Rest], L, Len) when Idx < 0 ->
+    %% Idex がマイナスの時の処理
     NewIdx = Len + Idx,
     slice_list([NewIdx | Rest], L, Len);
 slice_list([Idx | Rest], L, Len) ->
@@ -191,6 +180,7 @@ slice_step(Begin, End, 1, L) when (Begin >= 0) and (End >= 0) ->
     lists:sublist(L, Begin + 1, Begin + End);
 slice_step(_Begin, _End, _Step, _L) ->
     error({not_implemented, slice}).
+
 
 %% type casts
 boolean_value([]) ->
