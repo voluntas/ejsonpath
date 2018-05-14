@@ -168,7 +168,13 @@ slice_list([Idx | Rest], L, Len) when Idx < 0 ->
     NewIdx = Len + Idx,
     slice_list([NewIdx | Rest], L, Len);
 slice_list([Idx | Rest], L, Len) ->
-    [lists:nth(Idx + 1, L) | slice_list(Rest, L, Len)];
+    %% そもそも ID が存在しない場合の処理が入っていない
+    case length(L) of
+        Length when Legnth >= (Idex + 1) ->
+            [lists:nth(Idx + 1, L) | slice_list(Rest, L, Len)];
+        _ ->
+            []
+    end
 slice_list([], _, _) ->
     [].
 
